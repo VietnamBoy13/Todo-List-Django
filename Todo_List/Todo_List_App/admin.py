@@ -11,9 +11,9 @@ class CustomUserAdmin(UserAdmin):
     form = CustomUserAdminForm
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        ('Personal info', {'fields': ('firstName', 'lastName', 'email', 'phone', 'address', 'email_verified')}),
-        ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
-        ('Important dates', {'fields': ('last_login', 'date_joined')}),
+        ('Личная информация', {'fields': ('firstName', 'lastName', 'email', 'phone', 'address', 'email_verified')}),
+        ('Права доступа', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
+        ('Важные даты', {'fields': ('last_login', 'date_joined')}),
     )
     add_fieldsets = (
         (None, {
@@ -27,40 +27,40 @@ class CustomUserAdmin(UserAdmin):
 
 class TaskAdmin(admin.ModelAdmin):
     list_display = (
-        'taskTitle', 
-        'category', 
+        'taskTitle',
+        'category',
         'dueDate',
-        'important', 
-        'user', 
-        'status', 
-        'sent_reminder', 
+        'important',
+        'user',
+        'status',
+        'sent_reminder',
         'emailNotification'
     )
     ordering = ('status', 'dueDate',)
     list_filter = [
-        'taskTitle', 
-        'category', 
-        'dueDate', 
-        'important', 
-        'completedDate', 
-        'createdDate', 
-        'user', 
+        'taskTitle',
+        'category',
+        'dueDate',
+        'important',
+        'completedDate',
+        'createdDate',
+        'user',
         'status'
     ]
     fieldsets = (
         (None, {
             'fields': ('taskTitle', 'description', 'category')
         }),
-        ('Date Information', {
+        ('Информация о датах', {
             'fields': ('dueDate', 'createdDate', 'completedDate')
         }),
-        ('Status', {
+        ('Статус', {
             'fields': ('important', 'status')
         }),
-        ('User Information', {
+        ('Информация о пользователе', {
             'fields': ('user',)
         }),
-        ('Notification', {
+        ('Уведомления', {
             'fields': ('notificationTime', 'sent_reminder', 'emailNotification')
         }),
     )
@@ -79,7 +79,7 @@ class CategoryAdmin(admin.ModelAdmin):
 
     def task_count(self, obj):
         return obj.task_count()
-    task_count.short_description = 'Task Count'
+    task_count.short_description = 'Количество задач'
 
 class NotificationsAdmin(admin.ModelAdmin):
     list_display = ('date', 'name', 'user', 'unread')
@@ -93,7 +93,7 @@ class PasswordResetRequestAdmin(admin.ModelAdmin):
         (None, {
             'fields': ('user', )
         }),
-        ('Reset', {
+        ('Сброс пароля', {
             'fields': ('reset_link_used', 'reset_link_expiry', 'reset_link_generated_at', 'email_verification_timestamp', 'email_verification_limit')
         })
     )

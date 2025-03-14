@@ -96,90 +96,91 @@
     </style>
 </head>
 <body>
-    <h1>Task Report of || {{ user.username }} ||</h1>
-    {% if profile_picture_base64 %}
-        <table class="profile-table">
-            <tr>
-                <td rowspan="5"><img class="profile-image" src="data:image/png;base64,{{ profile_picture_base64 }}"></td>
-                <td class="info"><strong>Username  : </strong> {{ user.username }}</td>
-            </tr>
-            <tr>
-                <td class="info"><strong>Full Name : </strong> {{ user.firstName }} {{ user.lastName }}</td>
-            </tr>
-            <tr>
-                <td class="info"><strong>Email     : </strong> {{ user.email }}</td>
-            </tr>
-            <tr>
-                <td class="info">{% if user.phone %}<strong>Phone     : </strong> {{ user.phone }}{% else %}<strong>Phone:</strong> Not Available{% endif %}</td>
-            </tr>
-            <tr>
-                <td class="info">{% if user.address %}<strong>Address   : </strong> {{ user.address }}{% else %}<strong>Address:</strong> Not Available{% endif %}</td>
-            </tr>
-        </table>
-    {% endif %}
-    <div>
-        <p class="total-task"><strong>Total Tasks: {{ tasks|length }}</strong></p>
-    </div>
-    <table class="taskTable">
+    <h1>Отчет по задачам пользователя || {{ user.username }} ||</h1>
+{% if profile_picture_base64 %}
+    <table class="profile-table">
         <tr>
-            <th scope="col" colspan="5">Title</th>
+            <td rowspan="5"><img class="profile-image" src="data:image/png;base64,{{ profile_picture_base64 }}"></td>
+            <td class="info"><strong>Имя пользователя  : </strong> {{ user.username }}</td>
         </tr>
         <tr>
-            <th scope="col" colspan="5">Category</th>
+            <td class="info"><strong>Полное имя : </strong> {{ user.firstName }} {{ user.lastName }}</td>
         </tr>
         <tr>
-            <th scope="col">Created Date</th>
-            <th scope="col">Due Date</th>
-            <th scope="col">Completed Date</th>
-            <th scope="col">Important</th>
-            <th scope="col">Status</th>
+            <td class="info"><strong>Электронная почта     : </strong> {{ user.email }}</td>
         </tr>
-        {% for task in tasks %}
-            <tr class="task-group group_">
-                <div style="page-break-inside:avoid;position:relative;">
-                    <table class="taskTable" border="1">
-                        <tr class="task-group group_">
-                            <td colspan="5">{{ task.taskTitle }}</td>
-                        </tr>
-                        <tr class="task-group group_">
-                            <td colspan="5">{{ task.category.name }}</td>
-                        </tr>
-                        <tr class="task-group group_">
-                            <td>
-                                <center>
-                                {{ task.createdDate | date:"d-m-y" }}<br>
-                                {{ task.createdDate | date:"h:i A" }}
-                                </center>
-                            </td>
-                            <td>
-                                <center>
-                                {{ task.dueDate | date:"d-m-y" }}<br>
-                                {{ task.dueDate | date:"h:i A" }}
-                                </center>
-                            </td>
-                            <td>
-                                <center>
-                                {% if task.completedDate %}
-                                    {{ task.completedDate | date:"d-m-y" }}<br>
-                                    {{ task.completedDate | date:"h:i A" }}
-                                {% else %}
-                                    <b> N/A </b>
-                                {% endif %}
-                                </center>
-                            </td>
-                            <td><center>{{ task.get_important_display }}</center></td>
-                            <td>{{ task.get_status_display }}</td>
-                        </tr>
-                        <tr class="task-group group_">
-                            <td colspan="5">
-                                <div class="des">Description</div>
-                                <div style="text-align:center;">{{ task.description }}</div>
-                            </td>
-                        </tr>
-                    </table>
-                <div>
-            </tr>    
-        {% endfor %}
+        <tr>
+            <td class="info">{% if user.phone %}<strong>Телефон     : </strong> {{ user.phone }}{% else %}<strong>Телефон:</strong> Не доступен{% endif %}</td>
+        </tr>
+        <tr>
+            <td class="info">{% if user.address %}<strong>Адрес   : </strong> {{ user.address }}{% else %}<strong>Адрес:</strong> Не доступен{% endif %}</td>
+        </tr>
     </table>
+{% endif %}
+<div>
+    <p class="total-task"><strong>Всего задач: {{ tasks|length }}</strong></p>
+</div>
+<table class="taskTable">
+    <tr>
+        <th scope="col" colspan="5">Заголовок</th>
+    </tr>
+    <tr>
+        <th scope="col" colspan="5">Категория</th>
+    </tr>
+    <tr>
+        <th scope="col">Дата создания</th>
+        <th scope="col">Срок выполнения</th>
+        <th scope="col">Дата завершения</th>
+        <th scope="col">Приоритет</th>
+        <th scope="col">Статус</th>
+    </tr>
+    {% for task in tasks %}
+        <tr class="task-group group_">
+            <div style="page-break-inside:avoid;position:relative;">
+                <table class="taskTable" border="1">
+                    <tr class="task-group group_">
+                        <td colspan="5">{{ task.taskTitle }}</td>
+                    </tr>
+                    <tr class="task-group group_">
+                        <td colspan="5">{{ task.category.name }}</td>
+                    </tr>
+                    <tr class="task-group group_">
+                        <td>
+                            <center>
+                            {{ task.createdDate | date:"d-m-y" }}<br>
+                            {{ task.createdDate | date:"h:i A" }}
+                            </center>
+                        </td>
+                        <td>
+                            <center>
+                            {{ task.dueDate | date:"d-m-y" }}<br>
+                            {{ task.dueDate | date:"h:i A" }}
+                            </center>
+                        </td>
+                        <td>
+                            <center>
+                            {% if task.completedDate %}
+                                {{ task.completedDate | date:"d-m-y" }}<br>
+                                {{ task.completedDate | date:"h:i A" }}
+                            {% else %}
+                                <b> Нет данных </b>
+                            {% endif %}
+                            </center>
+                        </td>
+                        <td><center>{{ task.get_important_display }}</center></td>
+                        <td>{{ task.get_status_display }}</td>
+                    </tr>
+                    <tr class="task-group group_">
+                        <td colspan="5">
+                            <div class="des">Описание</div>
+                            <div style="text-align:center;">{{ task.description }}</div>
+                        </td>
+                    </tr>
+                </table>
+            <div>
+        </tr>
+    {% endfor %}
+</table>
+
 </body>
 </html>

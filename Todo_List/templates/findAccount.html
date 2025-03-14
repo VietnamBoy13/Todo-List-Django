@@ -7,7 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Find Account</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/all.min.css">
-    <link rel="preload" href ="{% static 'background/unsplash-bg.jpg' %}" as="image">
+    <link rel="preload" href="{% static 'background/unsplash-bg.jpg' %}" as="image">
     <link rel="icon" type="image/png" href="{% static 'favicon/favicon.ico' %}">
     <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
     <style>
@@ -190,165 +190,175 @@
     </style>
 </head>
 <body>
-    <div class="section">
-        {% if messages %}
+<div class="section">
+    {% if messages %}
+    {% for message in messages %}
+    <div class="my-3 message fade-out {% if forloop.counter == 1 %}top-15{% else %}top-dynamic{% endif %}">
+        {% if message.extra_tags == 'findAccountSuccess' or message.extra_tags == 'resetLinkSuccess' %}
+        <div class="success form-control-wrapper">
+            <i class="fas fa-check-circle" style="font-size: 24px; margin-right: 10px;"></i>
+            {{ message }}
+        </div>
+        {% elif message.extra_tags == 'findAccountError' or message.extra_tags == 'resetLinkError' %}
+        <div class="error form-control-wrapper">
+            <i class="fas fa-times-circle" style="font-size: 24px; margin-right: 10px;"></i>
+            {{ message }}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% endif %}
+</div>
+
+<div class="container_">
+    {% if not user %}
+    <div class="searchAccount">
+        <h2>Найти аккаунт</h2>
+        <form method="post" action="/account/find/" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% if messages %}
             {% for message in messages %}
-                <div class="my-3 message fade-out {% if forloop.counter == 1 %}top-15{% else %}top-dynamic{% endif %}">
-                    {% if message.extra_tags == 'findAccountSuccess' or message.extra_tags == 'resetLinkSuccess' %}
-                        <div class="success form-control-wrapper">
-                            <i class="fas fa-check-circle" style="font-size: 24px; margin-right: 10px;"></i>
-                            {{ message }}
-                        </div>
-                    {% elif message.extra_tags == 'findAccountError' or message.extra_tags == 'resetLinkError' %}
-                        <div class="error form-control-wrapper">
-                            <i class="fas fa-times-circle" style="font-size: 24px; margin-right: 10px;"></i>
-                            {{ message }}
-                        </div>
-                    {% endif %}
-                </div>
+            {% if message.extra_tags == 'findAccountError' %}
+            {% if userName %}
+            <div class="input-container">
+                <i class="fa fa-user"></i>
+                <input type="text" name="username" id="username" placeholder="Имя пользователя" value="{{ username }}">
+            </div>
+            <div class="input-container">
+                <i class="fa fa-envelope"></i>
+                <input type="email" name="email" class="wrong" id="email" placeholder="Электронная почта"
+                       value="{{ email }}" onchange="changeBorder(this)">
+            </div>
+            {% else %}
+            <div class="input-container">
+                <i class="fa fa-user"></i>
+                <input type="text" name="username" class="wrong" id="username" placeholder="Имя пользователя"
+                       value="{{ username }}" onchange="changeBorder(this)">
+            </div>
+            <div class="input-container">
+                <i class="fa fa-envelope"></i>
+                <input type="email" name="email" class="wrong" id="email" placeholder="Электронная почта"
+                       value="{{ email }}" onchange="changeBorder(this)">
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="input-container">
+                <i class="fa fa-user"></i>
+                <input type="text" name="username" id="username" placeholder="Имя пользователя">
+            </div>
+            <div class="input-container">
+                <i class="fa fa-envelope"></i>
+                <input type="email" name="email" id="email" placeholder="Электронная почта">
+            </div>
+            {% endif %}
             {% endfor %}
-        {% endif %}
-    </div>
-    <div class="container_">
-        {% if not user %}
-            <div class="searchAccount">
-                <h2>Find Account</h2>
-                <form method="post" action="/account/find/"enctype="multipart/form-data">
-                    {% csrf_token %}
-                    {% if messages %}{% for message in messages %}
-                    {% if message.extra_tags == 'findAccountError' %}
-                        {% if userName %}
-                            <div class="input-container">
-                                <i class="fa fa-user"></i>
-                                <input type="text" name="username" id="username" placeholder="Username"value="{{ username }}">
-                            </div>
-                            <div class="input-container">
-                                <i class="fa fa-envelope"></i>
-                                <input type="email" name="email"class="wrong" id="email" placeholder="Email"value="{{ email }}"onchange="changeBorder(this)">
-                            </div>
-                        {% else %}
-                            <div class="input-container">
-                                <i class="fa fa-user"></i>
-                                <input type="text" name="username"class="wrong" id="username" placeholder="Username"value="{{ username }}"onchange="changeBorder(this)">
-                            </div>
-                            <div class="input-container">
-                                <i class="fa fa-envelope"></i>
-                                <input type="email" name="email"class="wrong" id="email" placeholder="Email"value="{{ email }}"onchange="changeBorder(this)">
-                            </div>
-                        {% endif %}
-                    {% else %}
-                        <div class="input-container">
-                            <i class="fa fa-user"></i>
-                            <input type="text" name="username" id="username" placeholder="Username">
-                        </div>
-                        <div class="input-container">
-                            <i class="fa fa-envelope"></i>
-                            <input type="email" name="email" id="email" placeholder="Email">
-                        </div>
-                    {% endif %}
-                    {% endfor %}
-                    {% else %}
-                        <div class="input-container">
-                            <i class="fa fa-user"></i>
-                            <input type="text" name="username" id="username" placeholder="Username">
-                        </div>
-                        <div class="input-container">
-                            <i class="fa fa-envelope"></i>
-                            <input type="email" name="email" id="email" placeholder="Email">
-                        </div>
-                    {% endif %}
-                    <button type="submit"class="findAccountBtn">Search</button>
-                </form>
-                <a href="/signin/" class="back-link">Back</a>
+            {% else %}
+            <div class="input-container">
+                <i class="fa fa-user"></i>
+                <input type="text" name="username" id="username" placeholder="Имя пользователя">
             </div>
-        {% elif user %}
-            <div class="searchResult">
-                <h3>Account Found !</h3>
-                <div class="image-container">
-                    <img src="{{ user.profile.profilePicture.url }}" alt="Profile Picture">
-                </div>
-                <div class="input-container">
-                    <i class="fa fa-user"></i>
-                    <input type="text" name="username" id="username" placeholder="Username" value="{{ user.username }}" disabled>
-                </div>
-                <div class="input-container">
-                    <i class="fa fa-user"></i>
-                    <input type="text" name="fullName" id="fullName" placeholder="Full Name" value="{{ user.firstName }} {{ user.lastName }}" disabled>
-                </div>
-                <div class="input-container">
-                    <i class="fa fa-envelope"></i>
-                    {% if emailVerified %}
-                        <input type="email" name="email" id="email" placeholder="Email" value="{{ user.email }}" disabled>
-                    {% elif not emailVerified %}
-                        <input type="email" name="email"class="wrong"title="Email is not verified!" id="email" placeholder="Email" value="{{ user.email }}" disabled>
-                    {% endif %}
-                </div>
-                <div class="btnContainer">
-                    <a href="/account/find/" class="back-link">Back</a>
-                    {% if emailVerified %}
-                        <form method="POST" action="/account/send-reset-link/">
-                            {% csrf_token %}
-                            <input type="hidden" name="username" value="{{ user.username }}">
-                            <input type="hidden" name="email" value="{{ user.email }}">
-                            <button type="submit"class="hiddenBtn">Reset Password</button>
-                        </form>
-                    {% elif not emailVerified %}
-                        <button type="button"class="hiddenBtn notAllowed" onclick="showAlert()">Reset Password</button>
-                    {% endif %}
-                </div>
+            <div class="input-container">
+                <i class="fa fa-envelope"></i>
+                <input type="email" name="email" id="email" placeholder="Электронная почта">
             </div>
-        {% endif %}
+            {% endif %}
+            <button type="submit" class="findAccountBtn">Поиск</button>
+        </form>
+        <a href="/signin/" class="back-link">Назад</a>
     </div>
-    <script>
-        // message transition 
-        document.addEventListener('DOMContentLoaded', (event) => {
-            const messages = document.querySelectorAll('.message');
-            messages.forEach((message) => {
+    {% elif user %}
+    <div class="searchResult">
+        <h3>Аккаунт найден!</h3>
+        <div class="image-container">
+            <img src="{{ user.profile.profilePicture.url }}" alt="Фото профиля">
+        </div>
+        <div class="input-container">
+            <i class="fa fa-user"></i>
+            <input type="text" name="username" id="username" placeholder="Имя пользователя" value="{{ user.username }}"
+                   disabled>
+        </div>
+        <div class="input-container">
+            <i class="fa fa-user"></i>
+            <input type="text" name="fullName" id="fullName" placeholder="Полное имя"
+                   value="{{ user.firstName }} {{ user.lastName }}" disabled>
+        </div>
+        <div class="input-container">
+            <i class="fa fa-envelope"></i>
+            {% if emailVerified %}
+            <input type="email" name="email" id="email" placeholder="Электронная почта" value="{{ user.email }}"
+                   disabled>
+            {% elif not emailVerified %}
+            <input type="email" name="email" class="wrong" title="Электронная почта не подтверждена!" id="email"
+                   placeholder="Электронная почта" value="{{ user.email }}" disabled>
+            {% endif %}
+        </div>
+        <div class="btnContainer">
+            <a href="/account/find/" class="back-link">Назад</a>
+            {% if emailVerified %}
+            <form method="POST" action="/account/send-reset-link/">
+                {% csrf_token %}
+                <input type="hidden" name="username" value="{{ user.username }}">
+                <input type="hidden" name="email" value="{{ user.email }}">
+                <button type="submit" class="hiddenBtn">Сбросить пароль</button>
+            </form>
+            {% elif not emailVerified %}
+            <button type="button" class="hiddenBtn notAllowed" onclick="showAlert()">Сбросить пароль</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // message transition
+    document.addEventListener('DOMContentLoaded', (event) => {
+        const messages = document.querySelectorAll('.message');
+        messages.forEach((message) => {
+            setTimeout(() => {
+                message.classList.add('fade');
                 setTimeout(() => {
-                    message.classList.add('fade');
-                    setTimeout(() => {
-                        message.remove();
-                    }, 1000);
-                }, 5000);
-            });
+                    message.remove();
+                }, 1000);
+            }, 5000);
         });
-        // if 2 messages, then second one will be 2px after first one end point
-        window.addEventListener('DOMContentLoaded', (event) => {
-            const messages = document.querySelectorAll('.message');
-            if (messages.length > 1) {
-                const firstMessage = messages[0];
-                const secondMessage = messages[1];
+    });
+    // if 2 messages, then second one will be 2px after first one end point
+    window.addEventListener('DOMContentLoaded', (event) => {
+        const messages = document.querySelectorAll('.message');
+        if (messages.length > 1) {
+            const firstMessage = messages[0];
+            const secondMessage = messages[1];
 
-                const firstMessageHeight = firstMessage.offsetHeight;
-                const gap = 2;
+            const firstMessageHeight = firstMessage.offsetHeight;
+            const gap = 2;
 
-                secondMessage.style.top = `calc(15% + ${firstMessageHeight + gap}px)`;
-            }
-        });
-
-
-        const findSection = document.getElementById('searchAccount');
-        const resultSection = document.getElementById('searchResult');
-        const disabledBtn = document.querySelector('.notAllowed');
-        document.addEventListener('DOMContentLoaded', function(){
-            if({{ user }}){
-                findSection.style.display = 'none';
-                resultSection.style.display = 'block';
-            } else {
-                findSection.style.display = 'block';
-                resultSection.style.display = 'none';
-            }
-        })
-        
-        function showAlert() {
-            alert('Email is not verified!');
+            secondMessage.style.top = `calc(15% + ${firstMessageHeight + gap}px)`;
         }
-        function changeBorder(element) {
-            if (element.classList.contains('wrong')) {
-                element.classList.remove('wrong');
-            }
+    });
+
+
+    const findSection = document.getElementById('searchAccount');
+    const resultSection = document.getElementById('searchResult');
+    const disabledBtn = document.querySelector('.notAllowed');
+    document.addEventListener('DOMContentLoaded', function(){
+        if({{ user }}){
+            findSection.style.display = 'none';
+            resultSection.style.display = 'block';
+        } else {
+            findSection.style.display = 'block';
+            resultSection.style.display = 'none';
         }
-        
-    </script>
+    })
+
+    function showAlert() {
+        alert('Email is not verified!');
+    }
+    function changeBorder(element) {
+        if (element.classList.contains('wrong')) {
+            element.classList.remove('wrong');
+        }
+    }
+
+</script>
 </body>
 </html>

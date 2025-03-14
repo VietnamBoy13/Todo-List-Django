@@ -2,7 +2,7 @@ import secrets
 from cryptography.fernet import Fernet
 
 def generate_secret_key():
-    return ''.join(secrets.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for i in range(50))
+    return ''.join(secrets.choice('abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)') for _ in range(50))
 
 def generate_fernet_key():
     return Fernet.generate_key().decode()

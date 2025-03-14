@@ -47,168 +47,141 @@
 </style>
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <div class="container-fluid">
+        <!-- Логотип и домашняя ссылка -->
         <a class="navbar-brand" href="/home">
             <img src="/static/background/todo.png" class="rounded-circle" width="30" height="30" alt="todo">
         </a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+        <!-- Кнопка переключения навигации -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Переключить навигацию">
             <span class="navbar-toggler-icon"></span>
         </button>
+        <!-- Раздел навигации -->
         <div class="collapse navbar-collapse" id="navbarNavDropdown">
             <ul class="navbar-nav">
+                <!-- Пункт меню "Создать" -->
                 <li class="nav-item">
                     {% if user.is_authenticated %}
-                        <a class="nav-link {% if request.path == "/tasks/create/" %}active{% endif %}" aria-current="page" href="/tasks/create">Create</a>
+                        <a class="nav-link {% if request.path == "/tasks/create/" %}active{% endif %}" aria-current="page" href="/tasks/create">Создать</a>
                     {% else %}
-                        <a class="nav-link" aria-current="page" href="{% url 'signin' %}?next=/tasks/create">Home</a>
+                        <a class="nav-link" aria-current="page" href="{% url 'signin' %}?next=/tasks/create">Домой</a>
                     {% endif %}
                 </li>
+                <!-- Выпадающее меню "Задачи" -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle {% if request.path == "/tasks/running/" or request.path == "/tasks/completed/" %}active{% endif %}" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Tasks
+                        Задачи
                     </a>
                     <ul class="dropdown-menu">
+                        <!-- Подпункт "Выполняются" -->
                         <li class="nav-item">
                             {% if user.is_authenticated %}
-                                <a class="dropdown-item {% if request.path == "/tasks/running/" %}activeDropdown{% endif %}" aria-current="page" href="/tasks/running"style="border-bottom:1px solid #444;">
-                                    <span class="textGlow">Running</span>
+                                <a class="dropdown-item {% if request.path == "/tasks/running/" %}activeDropdown{% endif %}" aria-current="page" href="/tasks/running" style="border-bottom:1px solid #444;">
+                                    <span class="textGlow">Выполняются</span>
                                 </a>
                             {% else %}
-                                <a class="dropdown-item" aria-current="page" href="{% url 'signin' %}?next=/tasks/running">Running</a>
+                                <a class="dropdown-item" aria-current="page" href="{% url 'signin' %}?next=/tasks/running">Выполняются</a>
                             {% endif %}
                         </li>
+                        <!-- Подпункт "Завершены" -->
                         <li class="nav-item">
                             {% if user.is_authenticated %}
-                                <a class="dropdown-item {% if request.path == "/tasks/completed/" %}activeDropdown{% endif %}" aria-current="page" href="/tasks/completed">Completed</a>
+                                <a class="dropdown-item {% if request.path == "/tasks/completed/" %}activeDropdown{% endif %}" aria-current="page" href="/tasks/completed">Завершены</a>
                             {% else %}
-                                <a class="dropdown-item" aria-current="page" href="{% url 'signin' %}?next=/tasks/completed">Completed</a>
+                                <a class="dropdown-item" aria-current="page" href="{% url 'signin' %}?next=/tasks/completed">Завершены</a>
                             {% endif %}
                         </li>
                     </ul>
                 </li>
+                <!-- Пункт меню "Категория" -->
                 <li class="nav-item">
                     {% if user.is_authenticated %}
-                        <a class="nav-link {% if request.path == "/categories/add/" or request.path == "/categories/all/" %}active{% endif %}" aria-current="page" href="/categories/all">Category</a>
+                        <a class="nav-link {% if request.path == "/categories/add/" or request.path == "/categories/all/" %}active{% endif %}" aria-current="page" href="/categories/all">Категория</a>
                     {% else %}
-                        <a class="nav-link" aria-current="page" href="{% url 'signin' %}?next=/categories/all">Category</a>
+                        <a class="nav-link" aria-current="page" href="{% url 'signin' %}?next=/categories/all">Категория</a>
                     {% endif %}
                 </li>
+                <!-- Выпадающее меню "Скачать" -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Download
+                        Скачать
                     </a>
                     <ul class="dropdown-menu">
+                        <!-- Скачать в формате PDF -->
                         <li class="nav-item">
                             {% if user.is_authenticated %}
-                                <a class="dropdown-item" aria-current="page" href="/tasks/export/pdf"style="border-bottom:1px solid #444;">Export as PDF</a>
+                                <a class="dropdown-item" aria-current="page" href="/tasks/export/pdf" style="border-bottom:1px solid #444;">Экспорт в PDF</a>
                             {% else %}
-                                <a class="dropdown-item" aria-current="page" href="{% url 'signin' %}?next=/tasks/export/pdf/">Export as PDF</a>
+                                <a class="dropdown-item" aria-current="page" href="{% url 'signin' %}?next=/tasks/export/pdf/">Экспорт в PDF</a>
                             {% endif %}
                         </li>
+                        <!-- Скачать в формате CSV -->
                         <li class="nav-item">
                             {% if user.is_authenticated %}
-                                <a class="dropdown-item" aria-current="page" href="/tasks/export/csv">Export as CSV</a>
+                                <a class="dropdown-item" aria-current="page" href="/tasks/export/csv">Экспорт в CSV</a>
                             {% else %}
-                                <a class="dropdown-item" aria-current="page" href="{% url 'signin' %}?next=/tasks/export/csv/">Export as CSV</a>
+                                <a class="dropdown-item" aria-current="page" href="{% url 'signin' %}?next=/tasks/export/csv/">Экспорт в CSV</a>
                             {% endif %}
                         </li>
                     </ul>
                 </li>
             </ul>
+            <!-- Панель пользователя -->
             <ul class="navbar-nav ms-auto">
+                <!-- Иконка уведомлений -->
                 <li class="nav-item">
                     <div class="notificationIcon">
                         {% if user.is_authenticated %}
                         <a class="nav-link" href="/notifications">
                             {% if unread_count > 0 %}
-                                <i class="material-icons notificationIcon"title="New Notifications!">notifications_active</i>
+                                <i class="material-icons notificationIcon" title="Есть новые уведомления!">notifications_active</i>
                             {% else %}
-                                <i class="material-icons notificationIcon"title="No New Notifications!">notifications</i>
+                                <i class="material-icons notificationIcon" title="Нет новых уведомлений!">notifications</i>
                             {% endif %}
                         </a>
                         {% else %}
                         <a class="nav-link" href="{% url 'signin' %}?next=/notifications">
-                            <i class="material-icons notificationIcon"title="No New Notifications!">notifications</i>
+                            <i class="material-icons notificationIcon" title="Нет новых уведомлений!">notifications</i>
                         </a>
                         {% endif %}
                     </div>
                 </li>
+                <!-- Профиль пользователя -->
                 <li class="nav-item dropdown">
-                {% if user.is_authenticated %}
-                    <a class="nav-link dropdown-toggle no-caret" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <img src="{{ user.profile.profilePicture.url }}" class="rounded-circle altPic" width="25" height="25" alt="Profile Picture">
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                        <li>
-                            <div class="dropdown-header">
-                                <img src="{{ user.profile.profilePicture.url }}" class="rounded-circle" width="30" height="30" alt="Profile Picture">
-                                {{ user.username }}
-                            </div>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            {% if user.is_authenticated %}
-                                <a class="dropdown-item {% if request.path == "/account/" %}activeDropdown{% endif %}" href="/account/">
-                                    <i class="bi bi-person-fill"></i>  Profile
-                                </a>
-                            {% else %}
-                                <a class="dropdown-item {% if request.path == "/account/" %}activeDropdown{% endif %}" href="{% url 'signin' %}?next=/account">
-                                    <i class="bi bi-person-fill"></i>  Profile
-                                </a>
-                            {% endif %}
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" href="https://github.com/NAHIAN-19/Todo-List-Django">
-                                <i class="bi bi-info-circle-fill"></i>   About
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <label class="form-check-label" for="themeIcon" id="themeChange" style="margin-left:15px;user-select: none;">
-                                <i id="themeIcon" class="bi" style="cursor: pointer;"></i>
-                                Dark Mode
-                            </label>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'logout' %}">
-                                <i class="bi bi-door-closed-fill"></i>  Logout
-                            </a>
-                        </li>
-                    </ul>
-                {% else %}
-                    <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        User
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" href="/signin">
-                                <i class="bi bi-person-fill"></i>
-                                    Sign In
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
+                    {% if user.is_authenticated %}
+                        <a class="nav-link dropdown-toggle no-caret" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <img src="{{ user.profile.profilePicture.url }}" class="rounded-circle" width="25" height="25" alt="Аватар">
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
                             <li>
-                            <a class="dropdown-item" href="/signup">
-                                <i class="bi bi-person-plus-fill"></i>
-                                    Sign Up
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <label class="form-check-label" for="themeSwitch" id="themeChange" style="margin-left:15px;user-select: none;">
-                                <i id="themeIcon" class="bi" style="cursor: pointer;"></i>
-                                Dark Mode
-                            </label>
-                        </li> 
-                    </ul>
-                {% endif %}
+                                <a class="dropdown-item" href="/account/">
+                                    <i class="bi bi-person-fill"></i> Профиль
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="https://github.com/NAHIAN-19/Todo-List-Django">
+                                    <i class="bi bi-info-circle-fill"></i> О приложении
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'logout' %}">
+                                    <i class="bi bi-door-closed-fill"></i> Выйти
+                                </a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <a class="nav-link" href="/signin">
+                            <i class="bi bi-person-fill"></i> Войти
+                        </a>
+                        <a class="nav-link" href="/signup">
+                            <i class="bi bi-person-plus-fill"></i> Регистрация
+                        </a>
+                    {% endif %}
                 </li>
             </ul>
         </div>
     </div>
 </nav>
+
 <script>
     const darkModePref = localStorage.getItem('darkMode');
     const themeIcon = document.getElementById('themeChange');

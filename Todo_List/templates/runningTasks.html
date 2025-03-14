@@ -16,195 +16,195 @@
 </head>
 <body>
     {% include 'base.html' %}
-    <div class="container my-3">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="message fade-out {% if forloop.counter == 1 %}top-15{% else %}top-dynamic{% endif %}">
-                    {% if message.extra_tags == 'runningTaskSuccess' %}
-                        <div class="success form-control-wrapper">
-                            <i class="fas fa-check-circle" style="font-size: 24px; margin-right: 10px;"></i>
-                            {{ message }}
-                        </div>
-                    {% elif message.extra_tags == 'runningTaskError' %}
-                        <div class="error form-control-wrapper">
-                            <i class="fas fa-times-circle" style="font-size: 24px; margin-right: 10px;"></i>
-                            {{ message }}
-                        </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        {% endif %}
-        <div class="heading-container">
-            <h3 class="text-center">Running Tasks</h3>
-        </div>
-        <div class="row mb-3">
-            <div class="col-md-3">
-                <form method="GET" action="{% url 'running_tasks' %}">
-                    <div class="input-group">
-                        <input type="text" class="form-control btn-search" placeholder="Search by task title" name="search" id="searchInput" value="{{ search_query }}">
-                        <button class="btn btn-outline-secondary btn-search" type="submit">Search</button>
+<div class="container my-3">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="message fade-out {% if forloop.counter == 1 %}top-15{% else %}top-dynamic{% endif %}">
+                {% if message.extra_tags == 'runningTaskSuccess' %}
+                    <div class="success form-control-wrapper">
+                        <i class="fas fa-check-circle" style="font-size: 24px; margin-right: 10px;"></i>
+                        {{ message }}
                     </div>
-                </form>
+                {% elif message.extra_tags == 'runningTaskError' %}
+                    <div class="error form-control-wrapper">
+                        <i class="fas fa-times-circle" style="font-size: 24px; margin-right: 10px;"></i>
+                        {{ message }}
+                    </div>
+                {% endif %}
             </div>
+        {% endfor %}
+    {% endif %}
+    <div class="heading-container">
+            <h3 class="text-center">Выполняющиеся задачи</h3>
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <form method="GET" action="{% url 'running_tasks' %}">
+                <div class="input-group">
+                    <input type="text" class="form-control btn-search" placeholder="Поиск по названию задачи" name="search" id="searchInput" value="{{ search_query }}">
+                    <button class="btn btn-outline-secondary btn-search" type="submit">Поиск</button>
+                </div>
+            </form>
         </div>
-        <hr>
-        {% if tasks %}
-            <div class="table-responsive">
-                <table class="table table-hover"border="1">
-                    <thead>
-                        <tr class="table-dark">
-                            <th scope="col">
-                                <a href="?sort=taskTitle&order={{ request.GET.order|toggle_order }}">
-                                    Title
-                                    <i class="fa{% if request.GET.sort == 'taskTitle' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
+    </div>
+    <hr>
+    {% if tasks %}
+        <div class="table-responsive">
+            <table class="table table-hover" border="1">
+                <thead>
+                    <tr class="table-dark">
+                        <th scope="col">
+                            <a href="?sort=taskTitle&order={{ request.GET.order|toggle_order }}">
+                                Название
+                                <i class="fa{% if request.GET.sort == 'taskTitle' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
+                            </a>
+                        </th>
+                        <th scope="col">
+                            <a href="?sort=category&order={{ request.GET.order|toggle_order }}">
+                                Категория
+                                <i class="fa{% if request.GET.sort == 'category' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
+                            </a>
+                        </th>
+                        <th scope="col">
+                            <a href="?sort=dueDate&order={{ request.GET.order|toggle_order }}">
+                                Срок
+                                <i class="fa{% if request.GET.sort == 'dueDate' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
+                            </a>
+                        </th>
+                        <th scope="col">
+                            <a href="?sort=important&order={{ request.GET.order|toggle_order }}">
+                                Приоритет
+                                <i class="fa{% if request.GET.sort == 'important' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
+                            </a>
+                        </th>
+                        <th scope="col">
+                            <a href="?sort=status&order={{ request.GET.order|toggle_order }}">
+                                Статус
+                                <i class="fa{% if request.GET.sort == 'status' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
+                            </a>
+                        </th>
+                        <th scope="col" colspan="3" class="action-column">Действие</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for task in tasks %}
+                    <tr class="task-row" data-toggle="modal" data-target="#taskModal{{ task.id }}">
+                        <td title="{{ task.taskTitle }}">{{ task.taskTitle }}</td>
+                        <td>{{ task.category.name }}</td>
+                        <td>{{ task.dueDate|date:'d - m - y | h:i A' }}</td>
+                        <td>{{ task.get_important_display }}</td>
+                        <td>{{ task.get_status_display }}</td>
+                        <td align="center">
+                            <div class="btn-group" role="group" aria-label="Task Actions">
+                                {% if task.status == 'Overdue' %}
+                                <a href="{% url 'edit_task' task.encrypted_id %}" class="btn btn-warning" style="margin-right:20px;border-radius:10px;" title="Перезапустить">
+                                    <i class="fas fa-sync-alt"></i>
                                 </a>
-                            </th>
-                            <th scope="col">
-                                <a href="?sort=category&order={{ request.GET.order|toggle_order }}">
-                                    Category
-                                    <i class="fa{% if request.GET.sort == 'category' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
+                                {% else %}
+                                <a href="{% url 'edit_task' task.encrypted_id %}" class="btn btn-primary btn-edit" style="margin-right: 20px; border-radius: 10px;" title="Редактировать">
+                                    <i class="fas fa-edit"></i>
                                 </a>
-                            </th>
-                            <th scope="col">
-                                <a href="?sort=dueDate&order={{ request.GET.order|toggle_order }}">
-                                    Due Date
-                                    <i class="fa{% if request.GET.sort == 'dueDate' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
-                                </a>
-                            </th>
-                            <th scope="col">
-                                <a href="?sort=important&order={{ request.GET.order|toggle_order }}">
-                                    Priority
-                                    <i class="fa{% if request.GET.sort == 'important' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
-                                </a>
-                            </th>
-                            <th scope="col">
-                                <a href="?sort=status&order={{ request.GET.order|toggle_order }}">
-                                    Status
-                                    <i class="fa{% if request.GET.sort == 'status' %}{% if request.GET.order == 'asc' %} fa-sort-up{% else %} fa-sort-down{% endif %}{% else %} fa-sort{% endif %}"></i>
-                                </a>
-                            </th>
-                            <th scope="col" colspan="3" class="action-column">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {% for task in tasks %}
-                        <tr class="task-row" data-toggle="modal" data-target="#taskModal{{ task.id }}">
-                            <td title="{{ task.taskTitle }}">{{ task.taskTitle }}</td>
-                            <td>{{ task.category.name }}</td>
-                            <td>{{ task.dueDate|date:'d - m - y | h:i A' }}</td>
-                            <td>{{ task.get_important_display }}</td>
-                            <td>{{ task.get_status_display }}</td>
-                            <td align="center">
-                                <div class="btn-group" role="group" aria-label="Task Actions">
-                                    {% if task.status == 'Overdue' %}
-                                    <a href="{% url 'edit_task' task.encrypted_id %}" class="btn btn-warning" style="margin-right:20px;border-radius:10px;" title="Restart">
-                                        <i class="fas fa-sync-alt"></i>
-                                    </a>
-                                    {% else %}
-                                    <a href="{% url 'edit_task' task.encrypted_id %}" class="btn btn-primary btn-edit" style="margin-right: 20px; border-radius: 10px;" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    {% endif %}
-                                    <form method="POST" action="{% url 'delete_task' task.encrypted_id %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-danger" style="margin-right: 20px;border-radius:10px;" title="Delete">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </form>
-                                    <form method="post" action="{% url 'mark_task_completed' task.encrypted_id %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-success" title="Mark As Completed" style="border-radius:10px;">
-                                            <i class="fas fa-check"></i>
-                                        </button>
-                                    </form>
+                                {% endif %}
+                                <form method="POST" action="{% url 'delete_task' task.encrypted_id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger" style="margin-right: 20px;border-radius:10px;" title="Удалить">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                                <form method="post" action="{% url 'mark_task_completed' task.encrypted_id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success" title="Пометить как завершённую" style="border-radius:10px;">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <div class="modal fade task-modal" id="taskModal{{ task.id }}" tabindex="-1" aria-labelledby="taskModal{{ task.id }}" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered overflow-hidden">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="taskModal{{ task.id }}" title="{{ task.taskTitle }}" style="max-width: 220px;">{{ task.taskTitle }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter:invert(0.30);"></button>
                                 </div>
-                            </td>
-                        </tr>
-                        <div class="modal fade task-modal" id="taskModal{{ task.id }}" tabindex="-1" aria-labelledby="taskModal{{ task.id }}" aria-hidden="true">
-                            <div class="modal-dialog modal-dialog-centered overflow-hidden">
-                                <div class="modal-content">
-                                    <div class="modal-header">
-                                        <h5 class="modal-title" id="taskModal{{ task.id }}"title="{{ task.taskTitle }}"style="max-width: 220px;">{{ task.taskTitle }}</h5>
-                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter:invert(0.30);"></button>
+
+                                <div class="modal-body text-start">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="field-name">Дата создания</p>
+                                            <p class="field">{{ task.createdDate|date:'d/m/Y | h:i A' }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p class="field-name">Срок</p>
+                                            <p class="field">{{ task.dueDate|date:'d/m/Y | h:i A' }}</p>
+                                        </div>
                                     </div>
-                                    
-                                    <div class="modal-body text-start">
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <p class="field-name">Created Date</p>
-                                                <p class="field">{{ task.createdDate|date:'d/m/Y | h:i A' }}</p>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <p class="field-name">Due Date</p>
-                                                <p class="field">{{ task.dueDate|date:'d/m/Y | h:i A' }}</p>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p class="field-name">Категория</p>
+                                            <div class="field" title="{{ task.category }}">
+                                                <span class="truncate-text">{{ task.category }}</span>
                                             </div>
                                         </div>
-                                        <div class="row">
-                                            <div class="col-md-6">
-                                                <p class="field-name">Category</p>
-                                                <div class="field" title="{{ task.category }}">
-                                                    <span class="truncate-text">{{ task.category }}</span>
-                                                </div>
-                                            </div>
-                                            <div class="col-md-6">
-                                                <p class="field-name">Status</p>
-                                                <p class="field">{{ task.status }}</p>
-                                            </div>
+                                        <div class="col-md-6">
+                                            <p class="field-name">Статус</p>
+                                            <p class="field">{{ task.status }}</p>
                                         </div>
-                                        <div class="row">
-                                            <div class="col-md-12">
-                                                <p class="field-name">Description</p>
-                                                <div class="des-field"style="overflow:auto;max-height:200px;">{{ task.description|linebreaksbr|safe }}</div>
-                                            </div>
-                                        </div>                                
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <p class="field-name">Описание</p>
+                                            <div class="des-field" style="overflow:auto;max-height:200px;">{{ task.description|linebreaksbr|safe }}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>                
-                    {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            <div class="text-center mt-3">
-                <ul class="pagination">
-                    {% if tasks.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1" aria-label="First"title="Page No : 1">
-                            <span aria-hidden="true">&laquo;&laquo;</span>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ tasks.previous_page_number }}" aria-label="Previous"title="Page No : {{ tasks.previous_page_number }}">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
-                    </li>
-                    {% endif %}
-            
-                    {% for page_num in tasks.paginator.page_range %}
-                    <li class="page-item{% if page_num == tasks.number %} active{% endif %}">
-                        <a class="page-link" href="?page={{ page_num }}"title="Page No : {{ page_num }}">{{ page_num }}</a>
-                    </li>
-                    {% endfor %}
-            
-                    {% if tasks.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ tasks.next_page_number }}" aria-label="Next"title="Page No : {{ tasks.next_page_number }}">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ tasks.paginator.num_pages }}" aria-label="Last"title="Page No : {{ tasks.paginator.num_pages }}">
-                            <span aria-hidden="true">&raquo;&raquo;</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                </ul>
-            </div>
-        {% else %}
-            <p class="text-center">No tasks found.</p>
-        {% endif %}
-    </div>
-    
+                        </div>
+                    </div>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="text-center mt-3">
+            <ul class="pagination">
+                {% if tasks.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1" aria-label="First" title="Страница № 1">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ tasks.previous_page_number }}" aria-label="Previous" title="Страница № {{ tasks.previous_page_number }}">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for page_num in tasks.paginator.page_range %}
+                <li class="page-item{% if page_num == tasks.number %} active{% endif %}">
+                    <a class="page-link" href="?page={{ page_num }}" title="Страница № {{ page_num }}">{{ page_num }}</a>
+                </li>
+                {% endfor %}
+
+                {% if tasks.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ tasks.next_page_number }}" aria-label="Next" title="Страница № {{ tasks.next_page_number }}">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ tasks.paginator.num_pages }}" aria-label="Last" title="Страница № {{ tasks.paginator.num_pages }}">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    {% else %}
+        <p class="text-center">Задач не найдено.</p>
+    {% endif %}
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>

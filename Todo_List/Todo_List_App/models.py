@@ -9,7 +9,7 @@ from .utils import resize_image
 from cryptography.fernet import Fernet
 
 def get_fernet_key():
-    return settings.FERNET_KEY
+    return os.getenv('FERNET_KEY')
 
 fernet = Fernet(get_fernet_key())
 

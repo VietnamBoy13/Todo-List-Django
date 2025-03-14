@@ -54,12 +54,14 @@ def update_task_status():
         ),
     )
     for task in tasks_queryset:
-        if task.dueDate <= now :
+        if task.dueDate <= now:
             task.status = Task.OVERDUE
         else:
             task.status = Task.PENDING
         task.save()
-#######################this function is used to signup
+
+
+#######################эта функция используется для регистрации
 def signup(request):
     if request.user.is_authenticated:
         return redirect('home')
@@ -72,49 +74,53 @@ def signup(request):
             user.lastName = form.cleaned_data['lastName']
             user.phone = form.cleaned_data['phone']
             user.address = form.cleaned_data['address']
-            
+
             user.save()
             profile, created = Profile.objects.get_or_create(user=user)
             if created:
-                profile_form = ProfileForm(request.POST,request.FILES, instance=profile, user_instance=user)
+                profile_form = ProfileForm(request.POST, request.FILES, instance=profile, user_instance=user)
                 if profile_form.is_valid():
                     profile_form.save()
             login(request, user)
-            
-            # Trigger background tasks
-            send_welcome_email.delay(user.id)  # Pass the user ID to the Celery task
-            create_notification.delay(user.id, 'Account Created', timezone.now())
 
-            # Success messages
-            messages.success(request, f'Welcome {user.username}', extra_tags='profileInfoSuccess')
-            messages.success(request, 'Verify email to receive reminder & reset password', extra_tags='profileInfoSuccess')
+            # Запуск фоновых задач
+            send_welcome_email.delay(user.id)  # Передаем ID пользователя в задачу Celery
+            create_notification.delay(user.id, 'Аккаунт создан', timezone.now())
+
+            # Сообщения об успехе
+            messages.success(request, f'Добро пожаловать, {user.username}', extra_tags='profileInfoSuccess')
+            messages.success(request, 'Подтвердите электронную почту, чтобы получать напоминания и сбросить пароль',
+                             extra_tags='profileInfoSuccess')
             return redirect('profile')
         else:
-            messages.error(request, 'Signup failed',extra_tags='authError')
+            messages.error(request, 'Ошибка при регистрации', extra_tags='authError')
             return render(request, 'authentication.html', {'form': form})
     else:
         form = SignUpForm()
 
-    return render(request, 'authentication.html',{'form': form})
-################ Check if the username/email entered in the signup form already exists before submitting the form
+    return render(request, 'authentication.html', {'form': form})
+
+
+################ Проверка, существует ли введенный в форме регистрации логин/электронная почта перед отправкой формы
 def validate_field(request):
     field_type = request.GET.get('type')
     field_value = request.GET.get('value')
-    
+
     if field_type == 'username':
         exists = CustomUser.objects.filter(username=field_value).exists()
     elif field_type == 'email':
         exists = CustomUser.objects.filter(email=field_value).exists()
     else:
         exists = False
-    
+
     return JsonResponse({'exists': exists})
 
-#######################this function is used for signin
+
+#######################эта функция используется для входа в систему
 def signin(request):
     if request.user.is_authenticated:
         return redirect('home')
-    context = {'userPass':False, 'wrongBoth':False}
+    context = {'userPass': False, 'wrongBoth': False}
     if request.method == 'POST':
         form = AuthenticationForm(data=request.POST)
         userName = request.POST.get('username')
@@ -125,10 +131,10 @@ def signin(request):
             remember_me = form.cleaned_data.get('remember_me', False)
             user = authenticate(request, username=username, password=password)
             if user is not None:
-                notifications = Notifications (
-                    name = 'Logged In',
-                    date = timezone.now(),
-                    user = user,
+                notifications = Notifications(
+                    name='Вход в систему',
+                    date=timezone.now(),
+                    user=user,
                 )
                 notifications.notificationsCount += 1
                 notifications.save()
@@ -136,7 +142,7 @@ def signin(request):
                     user.encrypted_id = CustomUser.encrypt_id(int(user.id))
                     user.save()
                 login(request, user)
-                
+
                 if remember_me:
                     request.session.set_expiry(timedelta(days=7).total_seconds())
                 else:
@@ -144,16 +150,16 @@ def signin(request):
                 if 'next' in request.POST:
                     return redirect(request.POST.get('next'))
                 else:
-                    return(redirect('home'))
+                    return (redirect('home'))
         else:
             username = form.cleaned_data['username']
             userName = CustomUser.objects.filter(username=userName).first()
             if userName:
                 context['wrongPass'] = True
-                messages.error(request, 'Incorrect Password',extra_tags='authError')
+                messages.error(request, 'Неверный пароль', extra_tags='authError')
             else:
                 context['wrongBoth'] = True
-                messages.error(request, 'Incorrect Username and Password',extra_tags='authError')
+                messages.error(request, 'Неверный логин и пароль', extra_tags='authError')
             context['form'] = form
             return render(request, 'authentication.html', context)
     else:
@@ -161,33 +167,39 @@ def signin(request):
     context = {'form': form}
     return render(request, 'authentication.html', context)
 
-#######################this function is used for signout
+
+#######################эта функция используется для выхода из системы
 @login_required
 def logout_view(request):
     logout(request)
     return redirect('signin')
 
-#######################this sends the verification email to the logged in user
+
+#######################эта функция отправляет письмо для подтверждения электронной почты пользователю, который вошел в систему
 def send_verification_email(request, user_id):
     user = get_object_or_404(CustomUser, encrypted_id=user_id)
-    
+
     if user.email_verified:
-        messages.info(request, 'Email is already verified.', extra_tags='profileInfoSuccess')
+        messages.info(request, 'Электронная почта уже подтверждена.', extra_tags='profileInfoSuccess')
         return redirect('profile')
-    
-    # Define limit and duration for email verifications
+
+    # Определение лимита и длительности для подтверждения электронной почты
     verification_limit = 5
-    verification_duration = 60  # minutes
-    
-    # Check if email verification limit has been reached
-    limit_reached, remaining_time = PasswordResetRequest.email_verification_limit_reached(user, verification_limit, verification_duration)
+    verification_duration = 60  # минут
+
+    # Проверка, достигнут ли лимит на подтверждения электронной почты
+    limit_reached, remaining_time = PasswordResetRequest.email_verification_limit_reached(user, verification_limit,
+                                                                                          verification_duration)
     if limit_reached:
         if remaining_time is not None:
-            messages.error(request, f"Maximum email verification requests reached. Please try again in {remaining_time} minutes.", extra_tags='profileInfoError')
+            messages.error(request,
+                           f"Достигнут лимит на подтверждения электронной почты. Пожалуйста, попробуйте через {remaining_time} минут.",
+                           extra_tags='profileInfoError')
         else:
-            messages.error(request, "Maximum email verification requests reached. Please try again later.", extra_tags='profileInfoError')
+            messages.error(request, "Достигнут лимит на подтверждения электронной почты. Пожалуйста, попробуйте позже.",
+                           extra_tags='profileInfoError')
         return redirect('profile')
-    # Create a new email verification request
+    # Создание нового запроса на подтверждение электронной почты
     reset_request = PasswordResetRequest(
         user=user,
         email_verification_timestamp=timezone.now()
@@ -196,11 +208,11 @@ def send_verification_email(request, user_id):
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.encrypted_id))
     verification_link = request.build_absolute_uri(reverse('verify_email')) + f'?uid={uid}&token={token}'
-    subject = 'Email Verification'
-    message = f"Please click the link below to verify your email address: <a href='{verification_link}'>Verify Email</a>"
-    fromEmail = settings.DEFAULT_FROM_EMAIL 
+    subject = 'Подтверждение электронной почты'
+    message = f"Пожалуйста, нажмите на ссылку ниже, чтобы подтвердить ваш адрес электронной почты: <a href='{verification_link}'>Подтвердить электронную почту</a>"
+    fromEmail = settings.DEFAULT_FROM_EMAIL
     to_email = user.email
-    
+
     html_content = f"""
         <html>
             <body>
@@ -209,7 +221,7 @@ def send_verification_email(request, user_id):
         </html>
     """
     text_content = strip_tags(html_content)
-    
+
     email = EmailMultiAlternatives(
         subject,
         text_content,
@@ -217,30 +229,33 @@ def send_verification_email(request, user_id):
         [to_email],
     )
     email.attach_alternative(html_content, "text/html")
-    
+
     try:
         email.send()
         notifications = Notifications(
-            name='Verification Email Sent',
+            name='Отправлено письмо для подтверждения',
             date=timezone.now(),
             user=user,
         )
         notifications.notificationsCount += 1
         notifications.save()
-        messages.success(request, 'Verification email sent successfully! Please check your mail.', extra_tags='profileInfoSuccess')
+        messages.success(request, 'Письмо для подтверждения отправлено успешно! Пожалуйста, проверьте вашу почту.',
+                         extra_tags='profileInfoSuccess')
     except Exception as e:
         errorMessage = str(e)
         notifications = Notifications(
-            name=f'Verification Email Sending Failed: {errorMessage}',
+            name=f'Ошибка при отправке письма для подтверждения: {errorMessage}',
             date=timezone.now(),
             user=user,
         )
         notifications.save()
-        messages.error(request, 'There was a problem sending the email. Please try again later.', extra_tags='profileInfoError')
-    
+        messages.error(request, 'Возникла проблема при отправке письма. Пожалуйста, попробуйте позже.',
+                       extra_tags='profileInfoError')
+
     return redirect('profile')
 
-###################### this function verifies the email of the logged in user
+
+###################### эта функция подтверждает электронную почту вошедшего пользователя
 def verify_email(request):
     uidb64 = request.GET.get('uid')
     token = request.GET.get('token')
@@ -256,27 +271,28 @@ def verify_email(request):
         user.email_verified = True
         user.save()
         notifications = Notifications(
-            name='Email Verified',
+            name='Электронная почта подтверждена',
             date=timezone.now(),
             user=user,
         )
         notifications.notificationsCount += 1
         notifications.save()
-        messages.success(request, 'Email verification successful.', extra_tags='profileInfoSuccess')
+        messages.success(request, 'Подтверждение электронной почты прошло успешно.', extra_tags='profileInfoSuccess')
     else:
         if user is not None:
             notifications = Notifications(
-                name='Email Verification Failed',
+                name='Ошибка подтверждения электронной почты',
                 date=timezone.now(),
                 user=user,
             )
             notifications.notificationsCount += 1
             notifications.save()
-        messages.error(request, 'Email verification failed.', extra_tags='profileInfoError')
+        messages.error(request, 'Ошибка подтверждения электронной почты.', extra_tags='profileInfoError')
 
     return redirect('profile')
 
-#######################this function is used to find the account of the user
+
+#######################эта функция используется для поиска аккаунта пользователя
 def findAccount(request):
     try:
         user = request.user
@@ -294,13 +310,15 @@ def findAccount(request):
             user = None
         if not user:
             userList = CustomUser.objects.filter(username=username).first()
-            messages.error(request, 'User with this Email doesn\'t exist', extra_tags='findAccountError')
-            return render(request, 'findAccount.html', {'user': user, 'username': username, 'email': email, 'userName' : userList})
+            messages.error(request, 'Пользователь с таким Email не существует', extra_tags='findAccountError')
+            return render(request, 'findAccount.html',
+                          {'user': user, 'username': username, 'email': email, 'userName': userList})
         else:
             return render(request, 'findAccount.html', {'user': user, 'emailVerified': user.email_verified})
     return render(request, 'findAccount.html', {'user': user})
 
-####################### Send reset link to user mail to change password
+
+####################### Отправка ссылки для сброса пароля на почту пользователя
 def sendResetLink(request):
     if request.method == "POST":
         username = request.POST.get('username')
@@ -308,39 +326,39 @@ def sendResetLink(request):
         user = CustomUser.objects.filter(username=username, email=email).first()
 
         if user is None:
-            messages.error(request, 'User not found.',extra_tags='findAccountError')
+            messages.error(request, 'Пользователь не найден.', extra_tags='findAccountError')
             return render(request, 'findAccount.html')
 
         if not user.email_verified:
-            messages.error(request, 'Email is not verified.',extra_tags='resetLinkError')
+            messages.error(request, 'Email не подтвержден.', extra_tags='resetLinkError')
             return render(request, 'findAccount.html', {'user': user, 'emailVerified': user.email_verified})
 
         limit = 5
         duration = 60
         limit_reached, remaining_time = PasswordResetRequest.request_limit_reached(user, limit, duration)
         if limit_reached:
-            messages.error(request, f"Maximum password reset requests reached. Please try again in {remaining_time} minutes.", extra_tags='resetLinkError')
+            messages.error(request, f"Достигнут максимальный лимит запросов на сброс пароля. Попробуйте снова через {remaining_time} минут.", extra_tags='resetLinkError')
             return render(request, 'findAccount.html', {'user': user, 'emailVerified': user.email_verified})
 
-        # Mark all previous reset links as used
+        # Пометить все предыдущие ссылки для сброса пароля как использованные
         PasswordResetRequest.objects.filter(user=user).update(reset_link_used=True, reset_link_generated_at=None, reset_link_expiry=None)
 
-        # Create a new reset request
+        # Создать новый запрос на сброс пароля
         reset_request = PasswordResetRequest.objects.create(
             user=user,
             reset_link_used=False,
             reset_link_expiry=timezone.now() + timedelta(minutes=20),
             reset_link_generated_at=timezone.now()
         )
-        # Encrypt user ID for the reset link
+        # Шифровать ID пользователя для ссылки сброса
         encrypted_uid = CustomUser.encrypt_id(user.id)
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(encrypted_uid))
         reset_link = request.build_absolute_uri(reverse('checkResetLink')) + f'?uid={uid}&token={token}'
-        reset_html = f'<a href="{reset_link}">Reset Password</a>'
-        message = f"Please click the link below to reset your password: {reset_html}. This link will expire in 20 minutes. If you didn't request a password reset, please ignore this email."
+        reset_html = f'<a href="{reset_link}">Сбросить пароль</a>'
+        message = f"Пожалуйста, нажмите на ссылку ниже, чтобы сбросить ваш пароль: {reset_html}. Ссылка истечет через 20 минут. Если вы не запрашивали сброс пароля, игнорируйте это письмо."
 
-        subject = 'Password Reset'
+        subject = 'Сброс пароля'
         from_email = settings.DEFAULT_FROM_EMAIL
         to_email = user.email
 
@@ -362,7 +380,7 @@ def sendResetLink(request):
         try:
             email.send()
             notifications = Notifications(
-                name='Reset Link Sent',
+                name='Ссылка для сброса пароля отправлена',
                 date=timezone.now(),
                 user=user,
             )
@@ -372,34 +390,35 @@ def sendResetLink(request):
         except Exception as e:
             errorMessage = str(e)
             if "Connection unexpectedly closed" in errorMessage:
-                errorMessage = 'There was a problem connecting to the email server. Please try again later.'
+                errorMessage = 'Проблема с подключением к почтовому серверу. Попробуйте позже.'
             elif "Authentication" in errorMessage:
-                errorMessage = 'Authentication with the email server failed. Please contact support.'
+                errorMessage = 'Не удалось пройти аутентификацию на почтовом сервере. Пожалуйста, свяжитесь с поддержкой.'
             else:
-                errorMessage = 'There was a problem sending the reset link. Please try again later.'
+                errorMessage = 'Произошла ошибка при отправке ссылки для сброса пароля. Попробуйте снова позже.'
             notifications = Notifications(
-                name=f'Reset link sending failed: {errorMessage}',
+                name=f'Ошибка отправки ссылки для сброса пароля: {errorMessage}',
                 date=timezone.now(),
                 user=user,
             )
             notifications.notificationsCount += 1
             notifications.save()
-            messages.error(request, f'Error: {errorMessage}', extra_tags='resetLinkError')
+            messages.error(request, f'Ошибка: {errorMessage}', extra_tags='resetLinkError')
             return redirect('findAccount')
 
-        messages.success(request, 'Password reset email sent.', extra_tags='resetLinkSuccess')
+        messages.success(request, 'Письмо для сброса пароля отправлено.', extra_tags='resetLinkSuccess')
         return redirect('findAccount')
 
-    return HttpResponseForbidden("Forbidden")
+    return HttpResponseForbidden("Запрещено")
 
-#######################this function is used to check the reset link of the user to reset password
+
+####################### Эта функция используется для проверки ссылки сброса пароля пользователя
 def checkResetLink(request):
     uidb64 = request.GET.get('uid')
     token = request.GET.get('token')
     user = None
-    
+
     try:
-        # Decrypt the user ID from the base64 encoded string
+        # Расшифровать ID пользователя из строки в формате base64
         uid = force_str(urlsafe_base64_decode(uidb64))
         user = CustomUser.objects.get(pk=CustomUser.decrypt_id(uid))
     except (TypeError, ValueError, OverflowError, CustomUser.DoesNotExist):
@@ -410,77 +429,78 @@ def checkResetLink(request):
             reset_request = PasswordResetRequest.objects.filter(user=user).latest('timestamp')
         except PasswordResetRequest.DoesNotExist:
             reset_request = None
-        
+
         if reset_request is None or reset_request.reset_link_used or reset_request.reset_link_expiry < timezone.now():
-            messages.error(request, 'This reset link is invalid or expired.', extra_tags='resetLinkError')
+            messages.error(request, 'Эта ссылка для сброса пароля недействительна или истекла.',
+                           extra_tags='resetLinkError')
             return redirect('findAccount')
-        
-        # Set the session flag to indicate that the reset link is verified
+
+        # Установить флаг сессии, чтобы указать, что ссылка для сброса пароля проверена
         request.session['resetLinkVerified'] = True
         reset_request.reset_link_generated_at = timezone.now()
         reset_request.save()
-        
-        # Redirect to the password reset view using encrypted user ID
+
+        # Перенаправить на страницу сброса пароля с зашифрованным ID пользователя
         encrypted_user_id = CustomUser.encrypt_id(user.id)
         return redirect('reset_password', user_id=encrypted_user_id)
     else:
-        messages.error(request, 'Invalid password reset link.', extra_tags='resetLinkError')
+        messages.error(request, 'Недействительная ссылка для сброса пароля.', extra_tags='resetLinkError')
         return redirect('findAccount')
 
-####################### Removes session value upon clicking Cancel
+####################### Удаляет значение сессии при нажатии на кнопку "Отменить"
 @csrf_exempt
 @require_POST
 def invalidate_session(request):
     data = json.loads(request.body)
     user_id = data.get('user_id')
     if not user_id:
-        return JsonResponse({'status': 'failed', 'error': 'User ID not provided'})
-    
+        return JsonResponse({'status': 'failed', 'error': 'Не указан ID пользователя'})
+
     try:
         decrypted_user_id = CustomUser.decrypt_id(user_id)
         user = get_object_or_404(CustomUser, pk=decrypted_user_id)
         reset_request = PasswordResetRequest.objects.filter(user=user).latest('timestamp')
-        
+
         reset_request.reset_link_used = True
         reset_request.reset_link_expiry = None
         reset_request.reset_link_generated_at = None
         reset_request.save()
-        
+
         request.session.pop('resetLinkVerified', None)
-        
+
         return JsonResponse({'status': 'success'})
     except PasswordResetRequest.DoesNotExist:
-        return JsonResponse({'status': 'failed', 'error': 'No password reset request found for this user'})
+        return JsonResponse({'status': 'failed', 'error': 'Не найден запрос на сброс пароля для этого пользователя'})
     except CustomUser.DoesNotExist:
-        return JsonResponse({'status': 'failed', 'error': 'User not found'})
+        return JsonResponse({'status': 'failed', 'error': 'Пользователь не найден'})
     except Exception as e:
         return JsonResponse({'status': 'failed', 'error': str(e)})
 
-#######################this function is redirected from forgot password function to set new passwords
+####################### Эта функция перенаправляет из функции восстановления пароля для установки нового пароля
 def reset_password(request, user_id):
     if 'resetLinkVerified' not in request.session:
         return redirect('findAccount')
-    
+
     try:
         decrypted_user_id = CustomUser.decrypt_id(user_id)
         user = CustomUser.objects.get(pk=decrypted_user_id)
     except (ValueError, CustomUser.DoesNotExist):
-        raise Http404("No such user")
-    
+        raise Http404("Пользователь не найден")
+
     reset_link_duration = timedelta(minutes=20)
     reset_request = PasswordResetRequest.objects.filter(user=user).latest('timestamp')
     expiration_time = reset_request.reset_link_generated_at + reset_link_duration
     remaining_time = (expiration_time - timezone.now()).total_seconds()
-    
+
     if remaining_time <= 0:
         request.session.pop('resetLinkVerified')
         reset_request.reset_link_generated_at = None
         reset_request.reset_link_expiry = None
         reset_request.reset_link_used = True
         reset_request.save()
-        messages.error(request, 'Password reset timeout.', extra_tags='resetLinkError')
+        messages.error(request, 'Время для сброса пароля истекло.', extra_tags='resetLinkError')
         return redirect('findAccount')
-    
+
     if request.method == 'POST':
         form = CustomSetPasswordForm(user, request.POST)
         if form.is_valid():
@@ -490,16 +510,16 @@ def reset_password(request, user_id):
             reset_request.save()
             request.session.pop('resetLinkVerified')
             notifications = Notifications(
-                name='Password Reset Successful',
+                name='Сброс пароля успешно выполнен',
                 date=timezone.now(),
                 user=user,
             )
             notifications.save()
-            messages.success(request, 'Password reset successful.', extra_tags='resetPassSuccess')
-            
-            # Email to user if password reset is successful
-            message = f"Your password has been successfully reset. If you didn't request a password reset, please contact support."
-            subject = 'Password Reset Successful'
+            messages.success(request, 'Пароль успешно сброшен.', extra_tags='resetPassSuccess')
+
+            # Отправка email пользователю, если сброс пароля успешен
+            message = f"Ваш пароль был успешно сброшен. Если вы не запрашивали сброс пароля, пожалуйста, свяжитесь с поддержкой."
+            subject = 'Сброс пароля успешен'
             fromEmail = settings.DEFAULT_FROM_EMAIL
             to_email = user.email
 
@@ -523,13 +543,13 @@ def reset_password(request, user_id):
             except Exception as e:
                 errorMessage = str(e)
                 if "Connection unexpectedly closed" in errorMessage:
-                    errorMessage = 'There was a problem connecting to the email server. Please try again later.'
+                    errorMessage = 'Возникла проблема с подключением к почтовому серверу. Пожалуйста, попробуйте позже.'
                 elif "Authentication" in errorMessage:
-                    errorMessage = 'Authentication with the email server failed. Please contact support.'
+                    errorMessage = 'Ошибка аутентификации на почтовом сервере. Пожалуйста, свяжитесь с поддержкой.'
                 else:
-                    errorMessage = 'There was a problem sending the reset link. Please try again later.'
+                    errorMessage = 'Возникла проблема с отправкой письма для сброса пароля. Пожалуйста, попробуйте позже.'
                 notifications = Notifications(
-                    name=f'Password reset confirmation email sending failed: {errorMessage}',
+                    name=f'Ошибка отправки письма для сброса пароля: {errorMessage}',
                     date=timezone.now(),
                     user=user,
                 )
@@ -537,15 +557,14 @@ def reset_password(request, user_id):
                 notifications.save()
             return redirect('signin')
         else:
-            messages.error(request, 'Password reset failed.', extra_tags='resetPassError')
+            messages.error(request, 'Не удалось сбросить пароль.', extra_tags='resetPassError')
             return render(request, 'resetPassword.html', {'form': form, 'user_id': user_id, 'remaining_time': int(remaining_time)})
     else:
         form = CustomSetPasswordForm(user=user)
     context = {'form': form, 'user_id': user_id, 'remaining_time': int(remaining_time)}
     return render(request, 'resetPassword.html', context)
 
-
-#######################this function shows and edit information of that user
+####################### Эта функция показывает и редактирует информацию о пользователе
 @login_required
 def profile(request):
     user = request.user
@@ -557,52 +576,52 @@ def profile(request):
     if request.method == 'POST':
         form = ProfileForm(request.POST, request.FILES, instance=user.profile, user_instance=user)
         password_form = PasswordChangeForm(user, request.POST)
-        
+
         if 'profilePicture' in request.FILES or any(field in request.POST for field in form.fields):
             if form.is_valid():
                 if not form.has_changed():
-                    messages.success(request,'Profile is unchanged',extra_tags='profileInfoSuccess')
+                    messages.success(request, 'Профиль не изменен', extra_tags='profileInfoSuccess')
                 else:
                     newEmail = form.cleaned_data['email']
                     newEnableEmailNotifications = form.cleaned_data['enableEmailNotifications']
                     if newEmail != user.email:
                         user.email_verified = False
-                        notifications = Notifications (
-                            name = f'Email Changed from {user.email} to {newEmail}',
-                            date = timezone.now(),
-                            user = user,
+                        notifications = Notifications(
+                            name=f'Email изменен с {user.email} на {newEmail}',
+                            date=timezone.now(),
+                            user=user,
                         )
                     if user.email_verified:
                         profile.enableEmailNotifications = bool(newEnableEmailNotifications)
                     form.save()
                     user.save()
-                    notifications = Notifications (
-                        name = 'Profile Info Updated',
-                        date = timezone.now(),
-                        user = user,
+                    notifications = Notifications(
+                        name='Информация профиля обновлена',
+                        date=timezone.now(),
+                        user=user,
                     )
                     notifications.notificationsCount += 1
                     notifications.save()
-                    messages.success(request, 'Profile updated successfully',extra_tags='profileInfoSuccess')
+                    messages.success(request, 'Профиль успешно обновлен', extra_tags='profileInfoSuccess')
             else:
-                messages.error(request, 'Profile update failed',extra_tags='profileInfoError')
-                
+                messages.error(request, 'Не удалось обновить профиль', extra_tags='profileInfoError')
+
         if any(field in request.POST for field in password_form.fields):
             if password_form.is_valid():
                 password_form.save()
-                notifications = Notifications (
-                    name = 'Profile password changed',
-                    date = timezone.now(),
-                    user = user,
+                notifications = Notifications(
+                    name='Пароль профиля изменен',
+                    date=timezone.now(),
+                    user=user,
                 )
                 notifications.notificationsCount += 1
                 notifications.save()
                 update_session_auth_hash(request, password_form.user)
-                messages.success(request, 'Password changed successfully',extra_tags='profilePassSuccess')
+                messages.success(request, 'Пароль успешно изменен', extra_tags='profilePassSuccess')
             elif password_form.is_empty():
                 password_form.clear_errors()
             else:
-                messages.error(request, 'Password update failed.',extra_tags='profilePassError')
+                messages.error(request, 'Не удалось обновить пароль.', extra_tags='profilePassError')
 
         return render(request, 'profile.html', {'form': form, 'password_form': password_form})
     else:
@@ -613,8 +632,8 @@ def profile(request):
         'form': form,
         'password_form': password_form
     })
-    
-######################## For Showing Notifications in reverse order
+
+######################## Для отображения уведомлений в обратном порядке
 def notifications(request):
     notifications = Notifications.objects.filter(user=request.user)
     notifications.update(unread=False)
@@ -625,7 +644,7 @@ def notifications(request):
     }
     return render(request, 'notifications.html', context)
 
-#######################this function is used for ADDING task for that user
+####################### Эта функция используется для добавления задачи для пользователя
 @login_required
 def create_task(request):
     categories = Category.objects.filter(user=request.user)
@@ -636,7 +655,7 @@ def create_task(request):
         'categories': categories,
         'cur_date_': cur_date_,
         'cur_date': cur_date,
-        'othersCategory':othersCategory
+        'othersCategory': othersCategory
     }
     if request.method == "POST":
         title = request.POST['title']
@@ -645,7 +664,7 @@ def create_task(request):
         try:
             category = Category.objects.get(id=category_id)
         except:
-            messages.error(request, 'Category not found',extra_tags='createTaskError')
+            messages.error(request, 'Категория не найдена', extra_tags='createTaskError')
             return render(request, 'createTask.html', context)
         dueDate = request.POST['dueDate']
         important = request.POST.get('important')
@@ -661,15 +680,15 @@ def create_task(request):
             notificationTime = 4
             emailNotification = False
         if due_datetime <= min_due_datetime:
-            notifications = Notifications (
-                name = f'Due datetime must be at least 5 minutes from now. You entered {due_datetime.strftime("%Y-%m-%d | %H:%M")}',
-                date = timezone.now(),
-                user = request.user,
+            notifications = Notifications(
+                name=f'Дата и время выполнения должно быть хотя бы через 5 минут. Вы ввели {due_datetime.strftime("%Y-%m-%d | %H:%M")}',
+                date=timezone.now(),
+                user=request.user,
             )
             notifications.notificationsCount += 1
             notifications.save()
             due_datetime = timezone.now() + timedelta(minutes=5)
-        
+
         task = Task(
             taskTitle=title,
             description=description,
@@ -682,29 +701,28 @@ def create_task(request):
         )
         try:
             task.save()
-            notifications = Notifications (
-                name = f'Task "{title}" Added',
-                date = timezone.now(),
-                user = request.user,
+            notifications = Notifications(
+                name=f'Задача "{title}" добавлена',
+                date=timezone.now(),
+                user=request.user,
             )
             notifications.notificationsCount += 1
             notifications.save()
-            messages.success(request,'Task created successfully',extra_tags='createTaskSuccess')
+            messages.success(request, 'Задача успешно создана', extra_tags='createTaskSuccess')
         except:
-            messages.error(request, 'Task creation failed',extra_tags='createTaskError')
+            messages.error(request, 'Ошибка создания задачи', extra_tags='createTaskError')
             return render(request, 'createTask.html', context)
     if not categories:
         context['no_categories'] = True
-    
+
     return render(request, 'createTask.html', context)
 
-
-#######################this function shows all the running tasks of that user
+####################### Эта функция показывает все текущие задачи пользователя
 def running_tasks(request):
     search_query = request.GET.get('search', '')
     sort_by = request.GET.get('sort', 'important')
     order = request.GET.get('order', 'desc')
-    
+
     tasks_queryset = Task.objects.filter(user=request.user).filter(Q(status=Task.PENDING) | Q(status=Task.OVERDUE))
 
     if sort_by and order:
@@ -714,7 +732,7 @@ def running_tasks(request):
             tasks_queryset = tasks_queryset.order_by(F(sort_by).desc())
     else:
         tasks_queryset = tasks_queryset.order_by('-important', '-status', '-dueDate')
-        
+
     paginator = Paginator(tasks_queryset, 10)
     page = request.GET.get('page')
 
@@ -733,11 +751,12 @@ def running_tasks(request):
             task_count = tasks.count()
 
         if not task_count and search_query:
-            messages.error(request, f'Task "{search_query}" wasn\'t found.',extra_tags='runningTaskError')
+            messages.error(request, f'Задача "{search_query}" не найдена.', extra_tags='runningTaskError')
         elif task_count and search_query:
-            messages.success(request, f'[{task_count}] tasks found matching your search query.',extra_tags='runningTaskSuccess')
+            messages.success(request, f'[ {task_count} ] задачи найдены по вашему запросу.',
+                             extra_tags='runningTaskSuccess')
         elif not task_count and not search_query:
-            messages.error(request, 'You haven\'t created any tasks yet.',extra_tags='runningTaskError')
+            messages.error(request, 'Вы еще не создали задачи.', extra_tags='runningTaskError')
 
     context = {
         'tasks': tasks,
@@ -745,13 +764,13 @@ def running_tasks(request):
     }
     return render(request, 'runningTasks.html', context)
 
-#######################this function edits the specific running task of that user
-@login_required  
+####################### Эта функция редактирует конкретную текущую задачу пользователя
+@login_required
 def edit_task(request, task_id):
     try:
         task = get_object_or_404(Task, encrypted_id=task_id, user=request.user)
     except:
-        messages.error(request, 'Task not found',extra_tags='runningTaskError')
+        messages.error(request, 'Задача не найдена', extra_tags='runningTaskError')
         return redirect('running_tasks')
     categories = Category.objects.filter(user=request.user)
     if request.method == "POST":
@@ -767,7 +786,7 @@ def edit_task(request, task_id):
             emailNotification = request.POST.get('emailNotification')
 
         if category is None:
-            return HttpResponse("Category not found", status=404)
+            return HttpResponse("Категория не найдена", status=404)
 
         dueDate = request.POST.get('dueDate')
 
@@ -789,67 +808,67 @@ def edit_task(request, task_id):
         task.sent_reminder = False
         try:
             task.save()
-            notifications = Notifications (
-                name = f'Task "{title}" Updated',
-                date = timezone.now(),
-                user = request.user,
+            notifications = Notifications(
+                name=f'Задача "{title}" обновлена',
+                date=timezone.now(),
+                user=request.user,
             )
             notifications.notificationsCount += 1
             notifications.save()
-            messages.success(request, 'Task edited successfully',extra_tags='runningTaskSuccess')
+            messages.success(request, 'Задача успешно отредактирована', extra_tags='runningTaskSuccess')
         except:
-            messages.error(request, 'Task edit failed',extra_tags='runningTaskError')
-        return redirect('running_tasks') 
-    
+            messages.error(request, 'Ошибка редактирования задачи', extra_tags='runningTaskError')
+        return redirect('running_tasks')
+
     context = {'task': task, 'categories': categories}
     return render(request, 'editTask.html', context)
 
-#######################this function is used for completing tasks 
+####################### Эта функция используется для завершения задач
 @require_POST
 def mark_task_completed(request, task_id):
     task = get_object_or_404(Task, encrypted_id=task_id, user=request.user)
     if task is None:
-        messages.error(request, 'Task not found', extra_tags='runningTaskError')
+        messages.error(request, 'Задача не найдена', extra_tags='runningTaskError')
         return redirect('running_tasks')
     task.completedDate = timezone.now()
     task.status = Task.COMPLETED
     task.save()
 
-    notifications = Notifications (
-        name = f'Task "{task.taskTitle}" Marked as Completed',
-        date = timezone.now(),
-        user = request.user,
+    notifications = Notifications(
+        name=f'Задача "{task.taskTitle}" помечена как завершенная',
+        date=timezone.now(),
+        user=request.user,
     )
     notifications.notificationsCount += 1
     notifications.save()
     profile = Profile.objects.get(user=request.user)
     profile.completedTasksCount += 1
     profile.save()
-    
-    messages.success(request,'Task marked as completed',extra_tags='runningTaskSuccess')
+
+    messages.success(request, 'Задача помечена как завершенная', extra_tags='runningTaskSuccess')
     return redirect('running_tasks')
 
-#######################this function deletes that specific task details from running tasks of that user
-@login_required 
+####################### Эта функция удаляет конкретную задачу из текущих задач пользователя
+@login_required
 def delete_task(request, task_id):
     try:
         task = get_object_or_404(Task, encrypted_id=task_id, user=request.user)
     except:
-        messages.error(request,'Task not found',extra_tags='runningTaskError')
+        messages.error(request, 'Задача не найдена', extra_tags='runningTaskError')
         return redirect('running_task')
-    notifications = Notifications (
-        name = f'Task "{task.taskTitle}" Deleted',
-        date = timezone.now(),
-        user = request.user,
+    notifications = Notifications(
+        name=f'Задача "{task.taskTitle}" удалена',
+        date=timezone.now(),
+        user=request.user,
     )
     notifications.notificationsCount += 1
     notifications.save()
     task.delete()
-    
-    messages.success(request, 'Task deleted successfully.',extra_tags='runningTaskSuccess')
+
+    messages.success(request, 'Задача успешно удалена.', extra_tags='runningTaskSuccess')
     return redirect('running_tasks')
 
-#######################this function shows the completed tasks of that user
+####################### Эта функция показывает завершенные задачи пользователя
 @login_required
 def completed_tasks(request):
     search_query = request.GET.get('search', '')
@@ -863,8 +882,8 @@ def completed_tasks(request):
         elif order == 'desc':
             task_queryset = task_queryset.order_by(F(sort_by).desc())
     else:
-        task_queryset = task_queryset.order_by( 'completedDate','-important', '-dueDate')
-        
+        task_queryset = task_queryset.order_by('completedDate', '-important', '-dueDate')
+
     paginator = Paginator(task_queryset, 10)
     page = request.GET.get('page')
 
@@ -874,7 +893,7 @@ def completed_tasks(request):
         completed_tasks = paginator.page(1)
     except EmptyPage:
         completed_tasks = paginator.page(paginator.num_pages)
-        
+
     is_refreshed = request.GET.get('refresh', False)
     task_count = task_queryset.count()
     if not is_refreshed:
@@ -882,38 +901,39 @@ def completed_tasks(request):
             completed_tasks = task_queryset.filter(taskTitle__icontains=search_query)
             task_count = completed_tasks.count()
         if not task_count and search_query:
-            messages.error(request, f'Task "{search_query}" wasn\'t found.',extra_tags='completedTaskError')
+            messages.error(request, f'Задача "{search_query}" не найдена.', extra_tags='completedTaskError')
         elif task_count and search_query:
-            messages.success(request, f'[{task_count}] tasks found matching your search query.',extra_tags='completedTaskSuccess')
+            messages.success(request, f'[ {task_count} ] задачи найдены по вашему запросу.',
+                             extra_tags='completedTaskSuccess')
         elif not task_count and not search_query:
-            messages.error(request, 'You haven\'t completed any tasks yet.',extra_tags='completedTaskError')
+            messages.error(request, 'Вы еще не завершили задачи.', extra_tags='completedTaskError')
     context = {
         'completed_tasks': completed_tasks,
         'search_query': search_query,
     }
-    
+
     return render(request, 'completedTasks.html', context)
 
-#######################this function clears all those completed task details of that user
+####################### Эта функция очищает все завершенные задачи пользователя
 @login_required
 def clear_history(request):
-    completedTaskCount = Task.objects.filter(Q(status = Task.COMPLETED),user=request.user).count()
+    completedTaskCount = Task.objects.filter(Q(status=Task.COMPLETED), user=request.user).count()
     if completedTaskCount is None:
-        messages.error(request, 'Completed task list is empty',extra_tags='completedTaskError')
+        messages.error(request, 'Список завершенных задач пуст', extra_tags='completedTaskError')
         return redirect('completed_tasks')
-    Task.objects.filter(Q(status = Task.COMPLETED),user=request.user).delete()
-    notifications = Notifications (
-        name = f'Completed Tasks({completedTaskCount}) History Cleared',
-        date = timezone.now(),
-        user = request.user,
+    Task.objects.filter(Q(status=Task.COMPLETED), user=request.user).delete()
+    notifications = Notifications(
+        name=f'История завершенных задач ({completedTaskCount}) очищена',
+        date=timezone.now(),
+        user=request.user,
     )
     notifications.notificationsCount += 1
     notifications.save()
-    
-    messages.success(request, 'Completed tasks history has been cleared.',extra_tags='completedTaskSuccess')
+
+    messages.success(request, 'История завершенных задач очищена.', extra_tags='completedTaskSuccess')
     return redirect('completed_tasks')
 
-#######################this function adds a category for that user
+####################### Эта функция добавляет категорию для пользователя
 @login_required
 def add_category(request):
     categories = Category.objects.all()
@@ -921,27 +941,27 @@ def add_category(request):
         name = request.POST['name']
         existing_category = Category.objects.filter(name=name, user=request.user).first()
         if existing_category:
-            messages.error(request, 'Category already exists.',extra_tags='categoryError')
+            messages.error(request, 'Категория уже существует.', extra_tags='categoryError')
             return redirect('add_category')
         else:
             category = Category(name=name, user=request.user)
             category.save()
             notifications = Notifications(
-                name = f'Category "{name}" Added',
-                date = timezone.now(),
-                user = request.user,
+                name=f'Категория "{name}" добавлена',
+                date=timezone.now(),
+                user=request.user,
             )
             notifications.notificationsCount += 1
             notifications.save()
-            messages.success(request, 'Category added successfully!',extra_tags='categorySuccess')
+            messages.success(request, 'Категория успешно добавлена!', extra_tags='categorySuccess')
     categories = Category.objects.filter(user=request.user)
-    
+
     context = {
         'categories': categories,
     }
     return render(request, 'showCategories.html', context)
 
-#######################this function is used to show the categories and all those tasks that the user has
+####################### Эта функция используется для отображения категорий и всех задач пользователя
 @login_required
 def all_categories(request, category_id=None):
     categories = Category.objects.filter(user=request.user)
@@ -949,10 +969,10 @@ def all_categories(request, category_id=None):
     sort_by = request.GET.get('sort', 'important')
     order = request.GET.get('order', 'desc')
     tasks = Task.objects.all()
-    
+
     if category_id is not None:
         tasks = tasks.filter(category_id=category_id)
-        tasks = tasks.order_by('important','-status', '-dueDate')
+        tasks = tasks.order_by('important', '-status', '-dueDate')
         if sort_by and order:
             if order == 'asc':
                 tasks = tasks.order_by(sort_by)
@@ -960,36 +980,35 @@ def all_categories(request, category_id=None):
                 tasks = tasks.order_by(F(sort_by).desc())
             else:
                 tasks = tasks.order_by('-important', '-completedDate', '-dueDate')
-    
+
     context = {
-        'categories': categories,
         'tasks': tasks,
+        'categories': categories,
     }
-    if not categories:
-        messages.error(request, 'No category found',extra_tags='categoryError')
-    
+
     return render(request, 'showCategories.html', context)
 
-#######################this function deletes specific category along with those associated tasks of that user
+
+####################### Эта функция удаляет конкретную категорию и связанные с ней задачи пользователя
 @login_required
 def delete_category(request, category_id):
     try:
         category = get_object_or_404(Category, id=category_id, user=request.user)
     except:
-        messages.error(request, 'Category not found',extra_tags='categoryError')
+        messages.error(request, 'Категория не найдена', extra_tags='categoryError')
         return redirect('all_categories')
     categoryName = category.name
-    if categoryName == 'Others':
+    if categoryName == 'Другие':
         taskCount = Task.objects.filter(category=category).count()
         if taskCount == 0:
-            messages.error(request, 'Category is empty!',extra_tags='categoryError')
+            messages.error(request, 'Категория пуста!', extra_tags='categoryError')
             return redirect('all_categories')
         Task.objects.filter(category=category).delete()
-        messages.success(request, 'Tasks in Others category deleted successfully',extra_tags='categorySuccess')
-        notifications = Notifications (
-            name = f'Tasks in "{categoryName}({taskCount})" Deleted',
-            date = timezone.now(),
-            user = request.user,
+        messages.success(request, 'Задачи в категории "Другие" успешно удалены', extra_tags='categorySuccess')
+        notifications = Notifications(
+            name=f'Задачи в категории "{categoryName}({taskCount})" удалены',
+            date=timezone.now(),
+            user=request.user,
         )
         notifications.notificationsCount += 1
         notifications.save()
@@ -997,53 +1016,57 @@ def delete_category(request, category_id):
     taskCount = Task.objects.filter(category=category).count()
     try:
         category.delete()
-        notifications = Notifications (
-            name = f'Category "{categoryName}({taskCount})" Deleted',
-            date = timezone.now(),
-            user = request.user,
-        )
-        notifications.notificationsCount += 1
-        notifications.save()
-        messages.success(request,'Category deleted successfully',extra_tags='categorySuccess')
-    except:
-        messages.error(request,'Category deletion failed',extra_tags='categoryError')
-    
-    return redirect('all_categories')
-#######################this function is used to delete user account
-@login_required
-def delete_account(request, user_id):
-    user = get_object_or_404(CustomUser, encrypted_id=user_id)
-    
-    if user.is_superuser:
         notifications = Notifications(
-            name='Admin Account Deletion Failed',
+            name=f'Категория "{categoryName}({taskCount})" удалена',
             date=timezone.now(),
             user=request.user,
         )
         notifications.notificationsCount += 1
         notifications.save()
-        messages.error(request, f'Admin account can only be deleted from the admin page.',extra_tags='profileInfoError')
+        messages.success(request, 'Категория успешно удалена', extra_tags='categorySuccess')
+    except:
+        messages.error(request, 'Не удалось удалить категорию', extra_tags='categoryError')
+
+    return redirect('all_categories')
+
+
+####################### Эта функция используется для удаления учетной записи пользователя
+@login_required
+def delete_account(request, user_id):
+    user = get_object_or_404(CustomUser, encrypted_id=user_id)
+
+    if user.is_superuser:
+        notifications = Notifications(
+            name='Не удалось удалить учетную запись администратора',
+            date=timezone.now(),
+            user=request.user,
+        )
+        notifications.notificationsCount += 1
+        notifications.save()
+        messages.error(request, f'Учетная запись администратора может быть удалена только с страницы администратора.',
+                       extra_tags='profileInfoError')
         return redirect('profile')
-    
+
     if request.method == 'POST':
         confirm = request.POST.get('delAccConfirm', '')
         password = request.POST.get('delAccPassword', '')
-        
+
         if confirm == 'CONFIRM' and user.check_password(password):
             user_media_path = os.path.join(settings.MEDIA_ROOT, 'profile_pictures', str(user.id))
             if os.path.exists(user_media_path):
                 shutil.rmtree(user_media_path)
             user.delete()
-            messages.success(request, 'Account deleted successfully.',extra_tags='authSuccess')
+            messages.success(request, 'Учетная запись успешно удалена.', extra_tags='authSuccess')
             logout(request)
             return redirect('signin')
         else:
-            messages.error(request, 'Confirmation text or password is incorrect.',extra_tags='profileInfoError')
+            messages.error(request, 'Неверный текст подтверждения или пароль.', extra_tags='profileInfoError')
             return render(request, 'profile.html', {'textWrong': True, 'passWrong': True})
-    
+
     return render(request, 'authentication.html', {'user': user})
 
-########################this function is used to download the csv file of all the tasks of that user
+
+######################## Эта функция используется для скачивания CSV-файла со всеми задачами пользователя
 @login_required
 def export_tasks(request):
     tasks_queryset = Task.objects.filter(user=request.user)
@@ -1051,8 +1074,10 @@ def export_tasks(request):
     response['Content-Disposition'] = 'attachment; filename="tasks.csv"'
 
     writer = csv.writer(response)
-    writer.writerow(['Task Title', 'Description', 'Category', 'Created Date', 'Due Date', 'Completed Date', 'Priority', 'Status'])
-    
+    writer.writerow(
+        ['Название задачи', 'Описание', 'Категория', 'Дата создания', 'Дата выполнения', 'Дата завершения', 'Приоритет',
+         'Статус'])
+
     for task in tasks_queryset:
         writer.writerow([
             task.taskTitle,
@@ -1064,21 +1089,23 @@ def export_tasks(request):
             task.get_important_display(),
             task.get_status_display()
         ])
-    
+
     notifications = Notifications(
-        name='Tasks Exported to CSV',
+        name='Задачи экспортированы в CSV',
         date=timezone.now(),
         user=request.user,
     )
     notifications.notificationsCount += 1
     notifications.save()
-    
+
     return response
-####################this function is used to download the pdf file of all the tasks of that userclass ExportPDF(View):
+
+
+#################### Эта функция используется для скачивания PDF-файла со всеми задачами пользователя
 class ExportPDF(View):
     def get(self, request):
         user = request.user
-        
+
         tasks = Task.objects.filter(user=user)
         profile = Profile.objects.filter(user=user).first()
         template = get_template('generatePDF.html')
@@ -1109,10 +1136,10 @@ class ExportPDF(View):
 
         response.write(pdf_file.getvalue())
         pdf_file.close()
-        notifications = Notifications (
-            name = 'Tasks Exported to PDF',
-            date = timezone.now(),
-            user = user,
+        notifications = Notifications(
+            name='Задачи экспортированы в PDF',
+            date=timezone.now(),
+            user=user,
         )
         notifications.notificationsCount += 1
         notifications.save()
